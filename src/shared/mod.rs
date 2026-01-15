@@ -12,6 +12,7 @@ use std::path::Path;
 use std::process::{Command, Stdio};
 use std::{env, fs};
 use std::{ffi::CStr, path::PathBuf};
+#[cfg(feature = "uv-tool")]
 use uv_dirs::{
     legacy_user_state_dir as uv_legacy_user_state_dir, user_state_dir as uv_user_state_dir,
 };
@@ -25,6 +26,7 @@ pub(crate) fn shared_tool_pkgs() -> Vec<(PackageManager, usize)> {
         packages.push((PackageManager::Cargo, c));
     }
 
+    #[cfg(feature = "uv-tool")]
     if let Some(c) = count_uv() {
         packages.push((PackageManager::Uv, c));
     }
@@ -41,6 +43,7 @@ pub(crate) fn shared_tool_pkgs() -> Vec<(PackageManager, usize)> {
 ///   * $CWD/.uv (Unix); on Windows: %APPDATA%\uv\data and .\.uv
 ///
 /// The tools are stored under <persistent-data-dir>/tools; each subdir represents one installed tool.
+#[cfg(feature = "uv-tool")]
 fn count_uv() -> Option<usize> {
     // Resolution order per uv docs: XDG_DATA_HOME/uv, HOME/.local/share/uv, CWD/.uv (and on
     // Windows: %APPDATA%\uv\data, .\.uv). uv_dirs gives the preferred state dir; if that fails,

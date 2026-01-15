@@ -594,9 +594,7 @@ impl PackageReadout for MacOSPackageReadout {
             }
         }
 
-        if let Some(c) = MacOSPackageReadout::count_cargo() {
-            packages.push((PackageManager::Cargo, c))
-        }
+        packages.extend(crate::shared::shared_tool_pkgs());
 
         packages
     }
@@ -648,9 +646,6 @@ impl MacOSPackageReadout {
         Some(cellar_count + caskroom_count + opt_cellar_count + opt_caskroom_count)
     }
 
-    fn count_cargo() -> Option<usize> {
-        shared::count_cargo()
-    }
 }
 
 impl NetworkReadout for MacOSNetworkReadout {

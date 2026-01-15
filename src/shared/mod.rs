@@ -45,11 +45,15 @@ pub(crate) fn shared_tool_pkgs() -> Vec<(PackageManager, usize)> {
 /// The tools are stored under <persistent-data-dir>/tools; each subdir represents one installed tool.
 #[cfg(feature = "uv-tool")]
 fn count_uv() -> Option<usize> {
-    // Resolution order per uv docs: XDG_DATA_HOME/uv, HOME/.local/share/uv, CWD/.uv (and on
-    // Windows: %APPDATA%\uv\data, .\.uv). uv_dirs gives the preferred state dir; if that fails,
-    // fall back to legacy to cover older layouts.
-    let base = uv_user_state_dir().or_else(uv_legacy_user_state_dir)?;
-    let tools_dir = base.join("tools");
+    // Priority per uv docs: UV_TOOL_DIR if set; otherwise the persistent state dir (XDG_DATA_HOME/uv,
+    // HOME/.local/share/uv, CWD/.uv; on Windows: %APPDATA%\uv\data, .\.uv) with a trailing
+    // "tools" component. uv_dirs gives the preferred state dir; if that fails, fall back to legacy
+    // to cover older layouts.
+    let tools_dir = env::var_os("UV_TOOL_DIR").map(PathBuf::from).or_else(|| {
+        uv_user_state_dir()
+            .or_else(uv_legacy_user_state_dir)
+            .map(|p| p.join("tools"))
+    })?;
 
     let entries = read_dir(&tools_dir).ok()?;
     let count = entries

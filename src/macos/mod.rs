@@ -645,7 +645,6 @@ impl MacOSPackageReadout {
 
         Some(cellar_count + caskroom_count + opt_cellar_count + opt_caskroom_count)
     }
-
 }
 
 impl NetworkReadout for MacOSNetworkReadout {

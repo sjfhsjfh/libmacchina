@@ -2,6 +2,7 @@
 #![allow(unused_imports)]
 #![allow(clippy::unnecessary_cast)]
 
+mod cargo;
 mod uv;
 
 use crate::traits::PackageManager;
@@ -15,57 +16,20 @@ use std::process::{Command, Stdio};
 use std::{env, fs};
 use std::{ffi::CStr, path::PathBuf};
 
-use uv::uv_dirs::{
-    legacy_user_state_dir as uv_legacy_user_state_dir, user_state_dir as uv_user_state_dir,
-};
-
 /// Package counts for user-space, cross-platform tool managers (e.g., cargo, uv).
 /// Returns a Vec of (PackageManager, count) that platforms can extend onto their own lists.
 pub(crate) fn shared_tool_pkgs() -> Vec<(PackageManager, usize)> {
     let mut packages = Vec::new();
 
-    if let Some(c) = count_cargo() {
+    if let Some(c) = cargo::count_cargo() {
         packages.push((PackageManager::Cargo, c));
     }
 
-    if let Some(c) = count_uv() {
+    if let Some(c) = uv::count_uv() {
         packages.push((PackageManager::Uv, c));
     }
 
     packages
-}
-
-/// Returns the number of installed tools managed by `uv tool` (similar scope to cargo-installed binaries).
-/// Storage layout per uv docs: https://docs.astral.sh/uv/reference/storage/#tools and
-/// https://docs.astral.sh/uv/reference/storage/#persistent-data-directory.
-/// Priority order of persistent data dir (uv_dirs crate handles resolution):
-///   * $XDG_DATA_HOME/uv
-///   * $HOME/.local/share/uv
-///   * $CWD/.uv (Unix); on Windows: %APPDATA%\uv\data and .\.uv
-///
-/// The tools are stored under <persistent-data-dir>/tools; each subdir represents one installed tool.
-fn count_uv() -> Option<usize> {
-    // Priority per uv docs: UV_TOOL_DIR if set; otherwise the persistent state dir (XDG_DATA_HOME/uv,
-    // HOME/.local/share/uv, CWD/.uv; on Windows: %APPDATA%\uv\data, .\.uv) with a trailing
-    // "tools" component. uv_dirs gives the preferred state dir; if that fails, fall back to legacy
-    // to cover older layouts.
-    let tools_dir = env::var_os("UV_TOOL_DIR").map(PathBuf::from).or_else(|| {
-        uv_user_state_dir()
-            .or_else(uv_legacy_user_state_dir)
-            .map(|p| p.join("tools"))
-    })?;
-
-    let entries = read_dir(&tools_dir).ok()?;
-    let count = entries
-        .filter_map(Result::ok)
-        .filter(|e| e.file_type().map(|t| t.is_dir()).unwrap_or(false))
-        .count();
-
-    if count == 0 {
-        None
-    } else {
-        Some(count)
-    }
 }
 
 use std::ffi::CString;
@@ -383,14 +347,4 @@ pub(crate) fn logical_address(interface: Option<&str>) -> Result<String, Readout
     Err(ReadoutError::Other(String::from(
         "Unable to get local IPv4 address.",
     )))
-}
-
-pub(crate) fn count_cargo() -> Option<usize> {
-    let bin = home::cargo_home().ok()?.join("bin");
-    let read_dir = read_dir(bin).ok()?;
-
-    match read_dir.count() {
-        0 => None,
-        pkgs => Some(pkgs),
-    }
 }

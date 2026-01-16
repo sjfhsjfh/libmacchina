@@ -2,6 +2,8 @@
 #![allow(unused_imports)]
 #![allow(clippy::unnecessary_cast)]
 
+mod uv;
+
 use crate::traits::PackageManager;
 use crate::traits::{ReadoutError, ShellFormat, ShellKind};
 
@@ -12,8 +14,8 @@ use std::path::Path;
 use std::process::{Command, Stdio};
 use std::{env, fs};
 use std::{ffi::CStr, path::PathBuf};
-#[cfg(feature = "uv-tool")]
-use uv_dirs::{
+
+use uv::uv_dirs::{
     legacy_user_state_dir as uv_legacy_user_state_dir, user_state_dir as uv_user_state_dir,
 };
 
@@ -26,7 +28,6 @@ pub(crate) fn shared_tool_pkgs() -> Vec<(PackageManager, usize)> {
         packages.push((PackageManager::Cargo, c));
     }
 
-    #[cfg(feature = "uv-tool")]
     if let Some(c) = count_uv() {
         packages.push((PackageManager::Uv, c));
     }
@@ -43,7 +44,6 @@ pub(crate) fn shared_tool_pkgs() -> Vec<(PackageManager, usize)> {
 ///   * $CWD/.uv (Unix); on Windows: %APPDATA%\uv\data and .\.uv
 ///
 /// The tools are stored under <persistent-data-dir>/tools; each subdir represents one installed tool.
-#[cfg(feature = "uv-tool")]
 fn count_uv() -> Option<usize> {
     // Priority per uv docs: UV_TOOL_DIR if set; otherwise the persistent state dir (XDG_DATA_HOME/uv,
     // HOME/.local/share/uv, CWD/.uv; on Windows: %APPDATA%\uv\data, .\.uv) with a trailing
